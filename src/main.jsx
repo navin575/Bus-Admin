@@ -4,6 +4,10 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App.jsx'
 import './index.css'
 
+// Initialize theme from preferences
+const savedTheme = localStorage.getItem('tnstc_theme') || 'light';
+document.documentElement.setAttribute('data-theme', savedTheme);
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>
@@ -11,3 +15,4 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     </BrowserRouter>
   </React.StrictMode>,
 )
+

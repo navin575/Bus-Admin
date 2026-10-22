@@ -32,10 +32,13 @@ const Sidebar = () => {
       </nav>
 
       <div className="sidebar-footer">
-        <button className="nav-item">
+        <NavLink 
+          to="/settings" 
+          className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+        >
           <Settings size={20} />
           <span>Settings</span>
-        </button>
+        </NavLink>
       </div>
     </aside>
   );
