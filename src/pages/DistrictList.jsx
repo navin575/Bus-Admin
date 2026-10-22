@@ -12,11 +12,33 @@ const DistrictList = () => {
   useEffect(() => {
     const fetchDistricts = async () => {
       try {
-        const querySnapshot = await getDocs(collection(db, "districts"));
-        const districtsData = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+        const [districtsSnap, busesSnap] = await Promise.all([
+          getDocs(collection(db, "districts")),
+          getDocs(collection(db, "buses"))
+        ]);
+
+        const busesData = busesSnap.docs.map(doc => doc.data());
+        
+        // Count actual buses registered under each district
+        const busCountByDistrict = {};
+        busesData.forEach(bus => {
+          if (bus.districtId) {
+            const dId = bus.districtId.toLowerCase();
+            busCountByDistrict[dId] = (busCountByDistrict[dId] || 0) + 1;
+          }
+        });
+
+        const districtsData = districtsSnap.docs.map(doc => {
+          const dData = doc.data();
+          const dId = doc.id.toLowerCase();
+          const actualCount = busCountByDistrict[dId] ?? 0;
+          return {
+            id: doc.id,
+            ...dData,
+            activeBuses: actualCount
+          };
+        });
+
         setDistricts(districtsData);
       } catch (error) {
         console.error("Error fetching districts:", error);
