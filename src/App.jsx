@@ -3,6 +3,7 @@ import Layout from './components/Layout';
 import DistrictList from './pages/DistrictList';
 import DistrictView from './pages/DistrictView';
 import BusDetails from './pages/BusDetails';
+import RouteList from './pages/RouteList';
 import LiveTracking from './pages/LiveTracking';
 import Settings from './pages/Settings';
 
@@ -21,6 +22,9 @@ function App() {
         
         {/* Level 3: Specific Bus in a District */}
         <Route path="districts/:districtId/bus/:busId" element={<BusDetails />} />
+
+        {/* Regional Transit Route Network */}
+        <Route path="routes" element={<RouteList />} />
 
         {/* Live Fleet Telemetry */}
         <Route path="live-tracking" element={<LiveTracking />} />

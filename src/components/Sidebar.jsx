@@ -1,11 +1,12 @@
 import { NavLink } from 'react-router-dom';
-import { Map, Activity, Bus, Settings } from 'lucide-react';
+import { Map, Activity, Bus, Settings, Navigation } from 'lucide-react';
 import './Sidebar.css';
 import tnLogo from '../assets/tn-logo.svg';
 
 const Sidebar = () => {
   const navItems = [
     { path: '/districts', name: 'Fleet Operations', icon: <Map size={20} /> },
+    { path: '/routes', name: 'Route Network', icon: <Navigation size={20} /> },
     { path: '/live-tracking', name: 'Live Tracking', icon: <Activity size={20} /> },
   ];
 
