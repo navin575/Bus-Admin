@@ -10,8 +10,8 @@ import {
   Check, 
   Layers
 } from 'lucide-react';
-import { collection, getDocs, doc, setDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { getRoutesList, saveRoute } from '../services/dataService';
+import { DEFAULT_BUSES } from '../data/defaultFleetData';
 import Modal from '../components/Modal';
 import './Pages.css';
 
@@ -39,17 +39,13 @@ const RouteList = () => {
 
   useEffect(() => {
     const fetchRoutesAndBuses = async () => {
+      setLoading(true);
       try {
-        const [routesSnap, busesSnap] = await Promise.all([
-          getDocs(collection(db, "routes")),
-          getDocs(collection(db, "buses"))
-        ]);
-
-        const routeList = routesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        const busList = busesSnap.docs.map(b => ({ id: b.id, ...b.data() }));
-
+        const routeList = await getRoutesList();
         setRoutes(routeList);
-        setBuses(busList);
+        // Try reading local/cached buses
+        const cachedBuses = JSON.parse(localStorage.getItem('tnstc_buses') || 'null') || DEFAULT_BUSES;
+        setBuses(cachedBuses);
       } catch (err) {
         console.error("Error fetching routes:", err);
       } finally {
@@ -108,12 +104,11 @@ const RouteList = () => {
     };
 
     try {
-      await setDoc(doc(db, "routes", routeId), routeData);
+      await saveRoute(routeData);
       setRoutes(prev => [routeData, ...prev]);
       setIsAddModalOpen(false);
     } catch (err) {
       console.error("Error saving route:", err);
-      alert("Failed to save route. Please check console.");
     } finally {
       setSubmitting(false);
     }

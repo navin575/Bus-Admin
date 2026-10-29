@@ -11,8 +11,8 @@ import {
   ArrowRight,
   Radio
 } from 'lucide-react';
-import { collection, getDocs } from 'firebase/firestore';
-import { db } from '../firebase';
+import { getDistrictsList } from '../services/dataService';
+import { DEFAULT_BUSES } from '../data/defaultFleetData';
 import './Pages.css';
 
 const LiveTracking = () => {
@@ -25,17 +25,13 @@ const LiveTracking = () => {
 
   useEffect(() => {
     const fetchLiveData = async () => {
+      setLoading(true);
       try {
-        const [districtsSnap, busesSnap] = await Promise.all([
-          getDocs(collection(db, "districts")),
-          getDocs(collection(db, "buses"))
-        ]);
-
-        const distList = districtsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        const busList = busesSnap.docs.map(b => ({ id: b.id, ...b.data() }));
-
+        const distList = await getDistrictsList();
         setDistricts(distList);
-        setBuses(busList);
+
+        const cachedBuses = JSON.parse(localStorage.getItem('tnstc_buses') || 'null') || DEFAULT_BUSES;
+        setBuses(cachedBuses);
       } catch (err) {
         console.error("Error fetching live tracking data:", err);
       } finally {

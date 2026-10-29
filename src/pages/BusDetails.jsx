@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ChevronRight, Home, MapPin, Navigation, Map, Edit2, Trash2, Plus, GripVertical, Bus } from 'lucide-react';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { getBusById, getRouteById, saveRoute } from '../services/dataService';
 import Modal from '../components/Modal';
 import './Pages.css';
 
@@ -18,22 +17,14 @@ const BusDetails = () => {
 
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true);
       try {
-        // 1. Fetch Bus
-        const busRef = doc(db, "buses", busId);
-        const busSnap = await getDoc(busRef);
-        
-        if (busSnap.exists()) {
-          const bus = { id: busSnap.id, ...busSnap.data() };
+        const bus = await getBusById(busId);
+        if (bus) {
           setBusData(bus);
-          
-          // 2. Fetch Route (if assigned)
           if (bus.routeId) {
-            const routeRef = doc(db, "routes", bus.routeId);
-            const routeSnap = await getDoc(routeRef);
-            if (routeSnap.exists()) {
-               setRouteData({ id: routeSnap.id, ...routeSnap.data() });
-            }
+            const route = await getRouteById(bus.routeId);
+            if (route) setRouteData(route);
           }
         }
       } catch (error) {
@@ -64,15 +55,14 @@ const BusDetails = () => {
       updatedStops = routeData.stops.map(s => s.id === editingStop.id ? editingStop : s);
     }
 
-    // Optimistic UI update
-    setRouteData({ ...routeData, stops: updatedStops });
+    const updatedRoute = { ...routeData, stops: updatedStops };
+    setRouteData(updatedRoute);
     setIsStopModalOpen(false);
 
-    // Save to Firestore
     try {
-      await updateDoc(doc(db, "routes", routeData.id), { stops: updatedStops });
+      await saveRoute(updatedRoute);
     } catch (error) {
-      console.error("Error saving stop to Firebase:", error);
+      console.error("Error saving stop:", error);
     }
   };
 
@@ -80,12 +70,11 @@ const BusDetails = () => {
     if (!routeData) return;
     const updatedStops = routeData.stops.filter(s => s.id !== stopId);
     
-    // Optimistic UI update
-    setRouteData({ ...routeData, stops: updatedStops });
+    const updatedRoute = { ...routeData, stops: updatedStops };
+    setRouteData(updatedRoute);
 
-    // Save to Firestore
     try {
-      await updateDoc(doc(db, "routes", routeData.id), { stops: updatedStops });
+      await saveRoute(updatedRoute);
     } catch (error) {
       console.error("Error deleting stop:", error);
     }

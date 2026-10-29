@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { MapPin, Bus, Plus, Search, Check } from 'lucide-react';
-import { collection, getDocs, doc, setDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { MapPin, Bus, Plus, Search, Check, RefreshCw } from 'lucide-react';
+import { getDistrictsList, saveDistrict } from '../services/dataService';
 import Modal from '../components/Modal';
 import './Pages.css';
 
@@ -23,37 +22,10 @@ const DistrictList = () => {
   });
 
   const fetchDistricts = async () => {
+    setLoading(true);
     try {
-      const [districtsSnap, busesSnap] = await Promise.all([
-        getDocs(collection(db, "districts")),
-        getDocs(collection(db, "buses"))
-      ]);
-
-      const busesData = busesSnap.docs.map(doc => doc.data());
-      
-      // Count actual buses registered under each district
-      const busCountByDistrict = {};
-      busesData.forEach(bus => {
-        if (bus.districtId) {
-          const dId = bus.districtId.toLowerCase();
-          busCountByDistrict[dId] = (busCountByDistrict[dId] || 0) + 1;
-        }
-      });
-
-      const districtsData = districtsSnap.docs.map(doc => {
-        const dData = doc.data();
-        const dId = doc.id.toLowerCase();
-        const actualCount = busCountByDistrict[dId] ?? 0;
-        return {
-          id: doc.id,
-          ...dData,
-          activeBuses: actualCount
-        };
-      });
-
-      // Sort districts alphabetically by name
-      districtsData.sort((a, b) => a.name.localeCompare(b.name));
-      setDistricts(districtsData);
+      const data = await getDistrictsList();
+      setDistricts(data);
     } catch (error) {
       console.error("Error fetching districts:", error);
     } finally {
@@ -93,12 +65,14 @@ const DistrictList = () => {
     };
 
     try {
-      await setDoc(doc(db, "districts", dId), districtData);
-      setDistricts(prev => [...prev, districtData].sort((a, b) => a.name.localeCompare(b.name)));
+      await saveDistrict(districtData);
+      setDistricts(prev => {
+        const updated = prev.filter(d => d.id !== dId);
+        return [...updated, districtData].sort((a, b) => a.name.localeCompare(b.name));
+      });
       setIsAddModalOpen(false);
     } catch (err) {
       console.error("Error adding district:", err);
-      alert("Failed to add district. Please check console.");
     } finally {
       setSubmitting(false);
     }

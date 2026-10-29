@@ -1,8 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ChevronRight, Home, MapPin, Search, Plus, Trash2, Bus as BusIcon } from 'lucide-react';
-import { collection, doc, getDoc, getDocs, query, where, setDoc, updateDoc, deleteDoc, increment } from 'firebase/firestore';
-import { db } from '../firebase';
+import { 
+  getDistrictById, 
+  getBusesForDistrict, 
+  getRoutesList, 
+  saveBus, 
+  deleteBusById 
+} from '../services/dataService';
 import Modal from '../components/Modal';
 import './Pages.css';
 
@@ -30,35 +35,17 @@ const DistrictView = () => {
 
   useEffect(() => {
     const fetchDistrictData = async () => {
+      setLoading(true);
       try {
-        // Fetch District Details
-        const districtRef = doc(db, "districts", districtId);
-        const districtSnap = await getDoc(districtRef);
+        const [districtData, busesData, routesData] = await Promise.all([
+          getDistrictById(districtId),
+          getBusesForDistrict(districtId),
+          getRoutesList()
+        ]);
         
-        if (districtSnap.exists()) {
-          setDistrict({ id: districtSnap.id, ...districtSnap.data() });
-        } else {
-          setDistrict({ name: districtId.charAt(0).toUpperCase() + districtId.slice(1) }); // Fallback
-        }
-
-        // Fetch Buses for this District
-        const q = query(collection(db, "buses"), where("districtId", "==", districtId));
-        const querySnapshot = await getDocs(q);
-        const busesData = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+        setDistrict(districtData);
         setBuses(busesData);
-
-        // Fetch available routes for selection
-        try {
-          const routesSnap = await getDocs(collection(db, "routes"));
-          const routesData = routesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          setAvailableRoutes(routesData);
-        } catch (err) {
-          console.warn("Could not load routes:", err);
-        }
-
+        setAvailableRoutes(routesData);
       } catch (error) {
         console.error("Error fetching district data:", error);
       } finally {
@@ -89,6 +76,7 @@ const DistrictView = () => {
       setNewBus(prev => ({ ...prev, routeId: '', route: '' }));
       return;
     }
+
     const foundRoute = availableRoutes.find(r => r.id === selectedRouteId);
     if (foundRoute) {
       setNewBus(prev => ({
@@ -117,25 +105,11 @@ const DistrictView = () => {
     };
 
     try {
-      // 1. Save bus in Firestore
-      await setDoc(doc(db, "buses", busId), busToSave);
-
-      // 2. Increment activeBuses in district document
-      try {
-        const districtRef = doc(db, "districts", districtId);
-        await updateDoc(districtRef, {
-          activeBuses: increment(1)
-        });
-      } catch (distErr) {
-        console.warn("Could not increment district activeBuses:", distErr);
-      }
-
-      // 3. Update local state
+      await saveBus(busToSave);
       setBuses(prev => [busToSave, ...prev]);
       setIsAddModalOpen(false);
     } catch (error) {
-      console.error("Error adding bus to Firestore:", error);
-      alert("Failed to add bus. Please check console for details.");
+      console.error("Error adding bus:", error);
     } finally {
       setSubmitting(false);
     }
@@ -146,20 +120,10 @@ const DistrictView = () => {
     if (!window.confirm(`Are you sure you want to delete bus ${busId}?`)) return;
 
     try {
-      await deleteDoc(doc(db, "buses", busId));
+      await deleteBusById(busId);
       setBuses(prev => prev.filter(b => b.id !== busId));
-
-      try {
-        const districtRef = doc(db, "districts", districtId);
-        await updateDoc(districtRef, {
-          activeBuses: increment(-1)
-        });
-      } catch (err) {
-        console.warn("Could not decrement district activeBuses:", err);
-      }
     } catch (error) {
       console.error("Error deleting bus:", error);
-      alert("Failed to delete bus.");
     }
   };
   
